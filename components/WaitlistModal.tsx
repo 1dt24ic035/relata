@@ -32,28 +32,32 @@ export default function WaitlistModal({
   );
 
   const formValid = nameValid && emailValid && experienceValid;
-  
+
   const handleSubmit = async () => {
   if (!formValid) return;
 
   try {
     setLoading(true);
 
-    const { error } = await supabase
-      .from("waitlist")
-      .insert([
-        {
-          name,
-          email,
-          experience,
-        },
-      ]);
+    const result = await supabase
+  .from("waitlist")
+  .insert([
+    {
+      name,
+      email,
+      experience,
+    },
+  ]);
 
-    if (error) {
-      if (error.code === "23505") {
-        setAlreadyJoined(true);
-        return;
-      }
+if (result.error) {
+  if (result.error.code === "23505") {
+    setAlreadyJoined(true);
+    return;
+  }
+
+  alert(result.error.message);
+  return;
+}
 
       alert(error.message);
       return;
