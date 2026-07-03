@@ -1,8 +1,8 @@
 "use client";
-
-"use client";
-
+import SuccessMessage from "./forms/SuccessMessage";
+import AlreadyJoinedMessage from "./forms/AlreadyJoinedMessage";
 import { useMemo, useState } from "react";
+import { supabase } from "../lib/supabase";
 import {
   validateEmail,
   validateExperience,
@@ -21,6 +21,9 @@ export default function WaitlistModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [experience, setExperience] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [alreadyJoined, setAlreadyJoined] = useState(false);
   const nameValid = useMemo(() => validateName(name), [name]);
   const emailValid = useMemo(() => validateEmail(email), [email]);
   const experienceValid = useMemo(
@@ -29,8 +32,85 @@ export default function WaitlistModal({
   );
 
   const formValid = nameValid && emailValid && experienceValid;
-  if (!isOpen) return null;
+  const handleSubmit = async () => {
+  if (!formValid) return;
 
+  try {
+  setLoading(true);
+
+  // Insert new user
+  const { error } = await supabase
+    .from("waitlist")
+    .insert([
+      {
+        name,
+        email,
+        experience,
+      },
+    ]);
+
+  if (error) {
+  if (error.code === "23505") {
+    setAlreadyJoined(true);
+    return;
+  }
+
+  alert(error.message);
+  return;
+}
+
+  setSuccess(true);
+
+  setName("");
+  setEmail("");
+  setExperience("");
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setSuccess(true);
+
+    setName("");
+    setEmail("");
+    setExperience("");
+
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong.");
+  } finally {
+    setLoading(false);
+  }
+};
+  if (!isOpen) return null;
+  if (success) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-xl rounded-3xl border border-gray-800 bg-zinc-900 p-8 text-white shadow-2xl">
+        <SuccessMessage
+          onClose={() => {
+            setSuccess(false);
+            onClose();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+   if (alreadyJoined) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-xl rounded-3xl border border-gray-800 bg-zinc-900 p-8 text-white shadow-2xl">
+        <AlreadyJoinedMessage
+          onClose={() => {
+            setAlreadyJoined(false);
+            onClose();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-xl rounded-3xl border border-gray-800 bg-zinc-900 p-8 text-white shadow-2xl">
@@ -108,31 +188,24 @@ export default function WaitlistModal({
             className="w-full rounded-xl border border-gray-700 bg-black px-4 py-3 outline-none resize-none focus:border-purple-500"
           />
           {!experienceValid && experience.length > 0 && (
-  <p className="mt-2 text-sm text-red-400">
-    Please write at least 10 characters.
-  </p>
-)}
+         <p className="mt-2 text-sm text-red-400">
+         Please write at least 10 characters.
+         </p>
+         )}
         </div>
-
-        {/* Temporary Preview */}
-        <div className="mb-8 rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-sm">
-          <p><strong>Name:</strong> {name || "-"}</p>
-          <p><strong>Email:</strong> {email || "-"}</p>
-          <p><strong>Experience:</strong> {experience || "-"}</p>
-        </div>
-
         {/* Buttons */}
         <div className="space-y-3">
 
           <button
-         disabled={!formValid}
+          onClick={handleSubmit}
+         disabled={!formValid || loading}
          className={`w-full rounded-xl py-4 font-semibold transition ${
          formValid
          ? "bg-gradient-to-r from-purple-600 to-pink-500 hover:scale-[1.02]"
          : "bg-gray-700 text-gray-400 cursor-not-allowed"
          }`}
-         >
-  Reserve My Spot 🚀
+            >
+  {loading ? "Joining..." : "Reserve My Spot 🚀"}
 </button>
 
         </div>

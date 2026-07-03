@@ -1,23 +1,22 @@
-type SuccessMessageProps = {
+type AlreadyJoinedMessageProps = {
   onClose: () => void;
 };
 
-export default function SuccessMessage({
+export default function AlreadyJoinedMessage({
   onClose,
-}: SuccessMessageProps) {
+}: AlreadyJoinedMessageProps) {
   return (
     <div className="text-center py-8">
-
-      <div className="text-6xl mb-5">🎉</div>
+      <div className="text-6xl mb-5">📧</div>
 
       <h2 className="text-3xl font-bold mb-3">
-        Welcome to Relata!
+        You're Already on the Waitlist!
       </h2>
 
       <p className="text-gray-400 mb-8">
-        You're officially on the waitlist.
+        Great news! We've already reserved your spot.
         <br />
-        We'll let you know as soon as we launch.
+        We'll email you as soon as Relata launches.
       </p>
 
       <button
@@ -26,7 +25,6 @@ export default function SuccessMessage({
       >
         Awesome 🚀
       </button>
-
     </div>
   );
 }
