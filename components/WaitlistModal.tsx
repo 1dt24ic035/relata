@@ -40,31 +40,26 @@ export default function WaitlistModal({
     setLoading(true);
 
     const result = await supabase
-  .from("waitlist")
-  .insert([
-    {
-      name,
-      email,
-      experience,
-    },
-  ]);
+      .from("waitlist")
+      .insert([
+        {
+          name,
+          email,
+          experience,
+        },
+      ]);
 
-if (result.error) {
-  if (result.error.code === "23505") {
-    setAlreadyJoined(true);
-    return;
-  }
+    if (result.error) {
+      if (result.error.code === "23505") {
+        setAlreadyJoined(true);
+        return;
+      }
 
-  alert(result.error.message);
-  return;
-}
-
-      alert(error.message);
+      alert(result.error.message);
       return;
     }
 
     setSuccess(true);
-
     setName("");
     setEmail("");
     setExperience("");
