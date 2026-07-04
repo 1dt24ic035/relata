@@ -1,73 +1,87 @@
 export default function Footer() {
   return (
-    <footer className="bg-black border-t border-gray-900 py-20">
-      <div className="max-w-7xl mx-auto px-6">
+    <footer className="border-t border-white/10 bg-black text-white">
+      <div className="max-w-7xl mx-auto px-6 py-20">
 
-        <div className="grid md:grid-cols-4 gap-12">
+        {/* Top */}
+        <div className="grid gap-12 md:grid-cols-4">
 
-          {/* Logo & About */}
+          {/* Brand */}
           <div>
-            <h2 className="text-3xl font-bold text-white">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
               Relata
             </h2>
 
-            <p className="text-gray-400 mt-4 leading-7">
-              Learn from people who have already made the decisions you're about
-              to make.
+            <p className="mt-5 text-gray-400 leading-7">
+              Learn from real experiences before making life's biggest
+              decisions.
             </p>
           </div>
 
           {/* Product */}
           <div>
-            <h3 className="font-semibold text-white mb-5">
-              Product
-            </h3>
+            <h3 className="font-semibold mb-5">Product</h3>
 
             <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-white cursor-pointer">Explore</li>
-              <li className="hover:text-white cursor-pointer">Categories</li>
-              <li className="hover:text-white cursor-pointer">Share Story</li>
-              <li className="hover:text-white cursor-pointer">Waitlist</li>
+              <li className="hover:text-white cursor-pointer transition">
+                Explore
+              </li>
+              <li className="hover:text-white cursor-pointer transition">
+                Categories
+              </li>
+              <li className="hover:text-white cursor-pointer transition">
+                Early Access
+              </li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h3 className="font-semibold text-white mb-5">
-              Company
-            </h3>
+            <h3 className="font-semibold mb-5">Company</h3>
 
             <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-white cursor-pointer">About</li>
-              <li className="hover:text-white cursor-pointer">Contact</li>
-              <li className="hover:text-white cursor-pointer">Privacy</li>
-              <li className="hover:text-white cursor-pointer">Terms</li>
+              <li className="hover:text-white cursor-pointer transition">
+                About
+              </li>
+              <li className="hover:text-white cursor-pointer transition">
+                Roadmap
+              </li>
+              <li className="hover:text-white cursor-pointer transition">
+                Contact
+              </li>
             </ul>
           </div>
 
-          {/* Newsletter */}
+          {/* Social */}
           <div>
-            <h3 className="font-semibold text-white mb-5">
-              Stay Updated
-            </h3>
+            <h3 className="font-semibold mb-5">Follow</h3>
 
-            <div className="flex flex-col gap-4">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="rounded-xl bg-zinc-900 border border-gray-800 px-4 py-3 outline-none focus:border-purple-500"
-              />
-
-              <button className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 py-3 font-semibold hover:scale-105 transition">
-                Join Waitlist
-              </button>
-            </div>
+            <ul className="space-y-3 text-gray-400">
+              <li className="hover:text-white cursor-pointer transition">
+                Instagram
+              </li>
+              <li className="hover:text-white cursor-pointer transition">
+                LinkedIn
+              </li>
+              <li className="hover:text-white cursor-pointer transition">
+                X (Twitter)
+              </li>
+            </ul>
           </div>
 
         </div>
 
-        <div className="border-t border-gray-900 mt-16 pt-8 text-center text-gray-500">
-          © 2026 Relata. Built with ❤️ to help people make better decisions.
+        {/* Bottom */}
+        <div className="mt-16 border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+
+          <p className="text-gray-500 text-sm">
+            © 2026 Relata. All rights reserved.
+          </p>
+
+          <p className="text-gray-500 text-sm">
+            Built to help people make better decisions.
+          </p>
+
         </div>
 
       </div>

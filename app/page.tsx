@@ -1,10 +1,14 @@
 "use client";
 
+"use client";
+
 import { useState } from "react";
 
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Stats from "../components/Stats";
+import WhyRelata from "../components/WhyRelata";
+import ExperiencePreview from "../components/ExperiencePreview";
 import HowItWorks from "../components/HowItWorks";
 import Categories from "../components/Categories";
 import Footer from "../components/Footer";
@@ -16,19 +20,20 @@ export default function Home() {
   return (
     <>
       <main className="bg-black text-white">
-        <Navbar onJoinClick={() => setIsWaitlistOpen(true)} />
+  <Navbar onJoinClick={() => setIsWaitlistOpen(true)} />
 
-        <Hero onJoinClick={() => setIsWaitlistOpen(true)} />
+  <Hero onJoinClick={() => setIsWaitlistOpen(true)} />
 
-        <Stats />
+  <Stats />
 
-        <HowItWorks />
+  <WhyRelata />
 
-        <Categories />
+  <HowItWorks />
 
-        <Footer />
-      </main>
+  <Categories />
 
+  <Footer />
+</main>
       <WaitlistModal
         isOpen={isWaitlistOpen}
         onClose={() => setIsWaitlistOpen(false)}
