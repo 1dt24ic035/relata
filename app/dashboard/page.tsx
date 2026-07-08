@@ -62,7 +62,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-red-600 text-white">
 
       <header className="border-b border-gray-800 bg-zinc-950">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
@@ -115,11 +115,14 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2">
               {experiences.map((experience) => (
-                <ExperienceCard
-                  key={experience.id}
-                  experience={experience}
-                />
-              ))}
+  <div key={experience.id}>
+    <p className="text-green-400 text-xs mb-2">
+      {experience.id}
+    </p>
+
+    <ExperienceCard experience={experience} />
+  </div>
+))}
             </div>
           )}
 

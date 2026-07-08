@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type Experience = {
   id: string;
   title: string;
@@ -36,9 +38,12 @@ export default function ExperienceCard({
         {experience.story}
       </p>
 
-      <button className="mt-6 text-purple-400 hover:text-purple-300 font-semibold">
+      <Link
+        href={`/experiences/${experience.id}`}
+        className="inline-block mt-6 text-purple-400 hover:text-purple-300 font-semibold"
+      >
         Read More →
-      </button>
+      </Link>
 
     </div>
   );
