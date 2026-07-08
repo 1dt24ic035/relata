@@ -62,7 +62,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-red-600 text-white">
+    <main className="min-h-screen bg-black text-white">
 
       <header className="border-b border-gray-800 bg-zinc-950">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
