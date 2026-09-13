@@ -53,6 +53,18 @@ function SearchContent() {
   async function loadSearchData() {
     setLoading(true);
 
+    // Make sure the user is authenticated before querying
+    // tables that require an authenticated Supabase session.
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      router.push("/login");
+      return;
+    }
+
     const {
       data: experiencesData,
       error: experienceError,
