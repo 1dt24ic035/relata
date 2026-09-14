@@ -23,6 +23,7 @@ type Experience = {
 type Profile = {
   id: string;
   display_name: string;
+  username: string | null;
   avatar_url: string | null;
 };
 
@@ -30,10 +31,7 @@ function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [experiences, setExperiences] = useState<Experience[]>(
-    []
-  );
-
+  const [experiences, setExperiences] = useState<Experience[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
   const [query, setQuery] = useState(
@@ -53,8 +51,6 @@ function SearchContent() {
   async function loadSearchData() {
     setLoading(true);
 
-    // Make sure the user is authenticated before querying
-    // tables that require an authenticated Supabase session.
     const {
       data: { user },
       error: userError,
@@ -93,7 +89,9 @@ function SearchContent() {
       error: profileError,
     } = await supabase
       .from("profiles")
-      .select("id, display_name, avatar_url")
+      .select(
+        "id, display_name, username, avatar_url"
+      )
       .order("display_name", {
         ascending: true,
       });
@@ -139,16 +137,28 @@ function SearchContent() {
   const filteredProfiles = useMemo(() => {
     const searchText = activeQuery
       .trim()
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/^@/, "");
 
     if (!searchText) {
       return [];
     }
 
     return profiles.filter((profile) => {
-      return (profile.display_name || "")
-        .toLowerCase()
-        .includes(searchText);
+      const displayName =
+        profile.display_name || "";
+
+      const username =
+        profile.username || "";
+
+      return (
+        displayName
+          .toLowerCase()
+          .includes(searchText) ||
+        username
+          .toLowerCase()
+          .includes(searchText)
+      );
     });
   }, [profiles, activeQuery]);
 
@@ -163,14 +173,17 @@ function SearchContent() {
 
     if (trimmedQuery) {
       router.replace(
-        `/search?q=${encodeURIComponent(trimmedQuery)}`
+        `/search?q=${encodeURIComponent(
+          trimmedQuery
+        )}`
       );
     } else {
       router.replace("/search");
     }
   }
 
-  const hasSearch = activeQuery.trim().length > 0;
+  const hasSearch =
+    activeQuery.trim().length > 0;
 
   const hasResults =
     filteredExperiences.length > 0 ||
@@ -192,7 +205,6 @@ function SearchContent() {
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-6xl px-6 py-10">
 
-        {/* Header */}
         <div className="mb-10">
           <Link
             href="/feed"
@@ -211,7 +223,6 @@ function SearchContent() {
           </p>
         </div>
 
-        {/* Search */}
         <form
           onSubmit={handleSubmit}
           className="mb-12 flex flex-col gap-3 sm:flex-row"
@@ -222,7 +233,7 @@ function SearchContent() {
             onChange={(event) =>
               setQuery(event.target.value)
             }
-            placeholder="Search experiences or people..."
+            placeholder="Search people, @username, or experiences..."
             className="flex-1 rounded-2xl border border-gray-800 bg-zinc-900 px-5 py-4 text-white outline-none transition placeholder:text-gray-600 focus:border-purple-500"
           />
 
@@ -234,7 +245,6 @@ function SearchContent() {
           </button>
         </form>
 
-        {/* Empty State */}
         {!hasSearch && (
           <div className="rounded-3xl border border-gray-800 bg-zinc-900 p-16 text-center">
             <div className="mb-5 text-6xl">
@@ -251,11 +261,9 @@ function SearchContent() {
           </div>
         )}
 
-        {/* Results */}
         {hasSearch && (
           <div className="space-y-12">
 
-            {/* People */}
             {filteredProfiles.length > 0 && (
               <section>
                 <div className="mb-5 flex items-center justify-between">
@@ -275,25 +283,40 @@ function SearchContent() {
                   {filteredProfiles.map((profile) => (
                     <Link
                       key={profile.id}
-                      href={`/u/${profile.id}`}
-                      className="flex items-center gap-4 rounded-2xl border border-gray-800 bg-zinc-900 p-5 transition hover:border-purple-500"
+                      href={`/u/${
+                        profile.username || profile.id
+                      }`}
+                      className="flex items-center gap-4 rounded-2xl border border-gray-800 bg-zinc-900 p-5 transition hover:border-purple-500 hover:bg-zinc-800"
                     >
-                      <img
-                        src={
-                          profile.avatar_url ||
-                          "/default-avatar.png"
-                        }
-                        alt="avatar"
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
+                      {profile.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt="avatar"
+                          className="h-14 w-14 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xl font-bold">
+                          {(profile.display_name ||
+                            profile.username ||
+                            "U")
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+                      )}
 
-                      <div>
-                        <p className="font-semibold">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">
                           {profile.display_name ||
-                            "Anonymous"}
+                            "Relata User"}
                         </p>
 
-                        <p className="text-sm text-gray-500">
+                        {profile.username && (
+                          <p className="mt-1 truncate text-sm text-purple-400">
+                            @{profile.username}
+                          </p>
+                        )}
+
+                        <p className="mt-1 text-sm text-gray-500">
                           View profile →
                         </p>
                       </div>
@@ -303,7 +326,6 @@ function SearchContent() {
               </section>
             )}
 
-            {/* Experiences */}
             <section>
               <div className="mb-5 flex items-center justify-between">
                 <h2 className="text-2xl font-bold">
@@ -371,16 +393,13 @@ function SearchContent() {
               )}
             </section>
 
-            {/* No Results */}
             {!hasResults && (
               <div className="rounded-3xl border border-gray-800 bg-zinc-950 p-8 text-center text-gray-500">
                 Nothing matched your search.
               </div>
             )}
-
           </div>
         )}
-
       </div>
     </main>
   );

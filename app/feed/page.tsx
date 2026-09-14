@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import ExperienceCard from "@/components/ExperienceCard";
 import { supabase } from "@/lib/supabase";
 
 type Experience = {
@@ -18,6 +17,7 @@ type Experience = {
 type Profile = {
   id: string;
   display_name: string;
+  username: string | null;
   avatar_url: string | null;
 };
 
@@ -28,6 +28,76 @@ type FeedExperience = Experience & {
   likeCount: number;
   likeLoading: boolean;
 };
+
+/* --------------------------------
+   Category helpers
+--------------------------------- */
+
+function cleanCategory(category: string) {
+  return category
+    .replace(
+      /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\s]+/u,
+      ""
+    )
+    .trim();
+}
+
+function getCategoryIcon(category: string) {
+  const normalized = cleanCategory(category).toLowerCase();
+
+  if (normalized.includes("education")) {
+    return "🎓";
+  }
+
+  if (normalized.includes("career")) {
+    return "💼";
+  }
+
+  if (normalized.includes("travel")) {
+    return "✈️";
+  }
+
+  if (normalized.includes("food")) {
+    return "🍔";
+  }
+
+  if (
+    normalized.includes("technology") ||
+    normalized.includes("tech")
+  ) {
+    return "💻";
+  }
+
+  if (normalized.includes("health")) {
+    return "❤️";
+  }
+
+  if (normalized.includes("finance")) {
+    return "💰";
+  }
+
+  if (normalized.includes("relationship")) {
+    return "❤️";
+  }
+
+  if (normalized.includes("college")) {
+    return "🏫";
+  }
+
+  if (normalized.includes("life")) {
+    return "🌱";
+  }
+
+  return "✨";
+}
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString();
+}
+
+/* --------------------------------
+   Feed page
+--------------------------------- */
 
 export default function FeedPage() {
   const router = useRouter();
@@ -41,6 +111,10 @@ export default function FeedPage() {
 
   const [selectedCategory, setSelectedCategory] =
     useState("All");
+
+  /* --------------------------------
+     Load feed
+  --------------------------------- */
 
   useEffect(() => {
     loadFeed();
@@ -68,77 +142,97 @@ export default function FeedPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { data: experiencesData, error } =
-      await supabase
-        .from("experiences")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
+    const {
+      data: experiencesData,
+      error,
+    } = await supabase
+      .from("experiences")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (error || !experiencesData) {
+      console.error(
+        "Error loading feed:",
+        error
+      );
+
       setLoading(false);
       return;
     }
 
     const enrichedExperiences =
       await Promise.all(
-        experiencesData.map(async (experience) => {
-          const { data: profile } =
-            await supabase
-              .from("profiles")
-              .select(
-                "id, display_name, avatar_url"
-              )
-              .eq("id", experience.user_id)
-              .single();
-
-          const likeCount =
-            await getLikeCount(
-              experience.id
-            );
-
-          let liked = false;
-          let bookmarked = false;
-
-          if (user) {
-            const { data: likeData } =
+        experiencesData.map(
+          async (experience) => {
+            const { data: profile } =
               await supabase
+                .from("profiles")
+                .select(
+                  "id, display_name, username, avatar_url"
+                )
+                .eq(
+                  "id",
+                  experience.user_id
+                )
+                .maybeSingle();
+
+            const likeCount =
+              await getLikeCount(
+                experience.id
+              );
+
+            let liked = false;
+            let bookmarked = false;
+
+            if (user) {
+              const {
+                data: likeData,
+              } = await supabase
                 .from("likes")
                 .select("id")
                 .eq(
                   "experience_id",
                   experience.id
                 )
-                .eq("user_id", user.id)
+                .eq(
+                  "user_id",
+                  user.id
+                )
                 .maybeSingle();
 
-            liked = !!likeData;
+              liked = !!likeData;
 
-            const { data: bookmarkData } =
-              await supabase
+              const {
+                data: bookmarkData,
+              } = await supabase
                 .from("bookmarks")
                 .select("id")
                 .eq(
                   "experience_id",
                   experience.id
                 )
-                .eq("user_id", user.id)
+                .eq(
+                  "user_id",
+                  user.id
+                )
                 .maybeSingle();
 
-            bookmarked =
-              !!bookmarkData;
-          }
+              bookmarked =
+                !!bookmarkData;
+            }
 
-          return {
-            ...experience,
-            profile,
-            liked,
-            bookmarked,
-            likeCount,
-            likeLoading: false,
-          };
-        })
+            return {
+              ...experience,
+              profile,
+              liked,
+              bookmarked,
+              likeCount,
+              likeLoading: false,
+            };
+          }
+        )
       );
 
     setExperiences(
@@ -148,25 +242,30 @@ export default function FeedPage() {
     setLoading(false);
   }
 
+  /* --------------------------------
+     Like
+  --------------------------------- */
+
   async function toggleLike(
     experienceId: string
   ) {
     const item = experiences.find(
-      (e) => e.id === experienceId
+      (experience) =>
+        experience.id === experienceId
     );
 
-    if (!item) return;
+    if (!item || item.likeLoading) {
+      return;
+    }
 
-    if (item.likeLoading) return;
-
-    setExperiences((prev) =>
-      prev.map((e) =>
-        e.id === experienceId
+    setExperiences((previous) =>
+      previous.map((experience) =>
+        experience.id === experienceId
           ? {
-              ...e,
+              ...experience,
               likeLoading: true,
             }
-          : e
+          : experience
       )
     );
 
@@ -175,14 +274,14 @@ export default function FeedPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setExperiences((prev) =>
-        prev.map((e) =>
-          e.id === experienceId
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
             ? {
-                ...e,
+                ...experience,
                 likeLoading: false,
               }
-            : e
+            : experience
         )
       );
 
@@ -191,7 +290,7 @@ export default function FeedPage() {
     }
 
     try {
-              if (item.liked) {
+      if (item.liked) {
         const { error } =
           await supabase
             .from("likes")
@@ -206,7 +305,10 @@ export default function FeedPage() {
             );
 
         if (error) {
-          console.error(error);
+          console.error(
+            "Error removing like:",
+            error
+          );
           return;
         }
       } else {
@@ -221,10 +323,12 @@ export default function FeedPage() {
 
         if (
           error &&
-          error.code !==
-            "23505"
+          error.code !== "23505"
         ) {
-          console.error(error);
+          console.error(
+            "Error adding like:",
+            error
+          );
           return;
         }
       }
@@ -234,33 +338,34 @@ export default function FeedPage() {
           experienceId
         );
 
-      setExperiences((prev) =>
-        prev.map((e) =>
-          e.id === experienceId
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
             ? {
-                ...e,
-                liked:
-                  !item.liked,
-                likeCount:
-                  latestCount,
+                ...experience,
+                liked: !item.liked,
+                likeCount: latestCount,
               }
-            : e
+            : experience
         )
       );
     } finally {
-      setExperiences((prev) =>
-        prev.map((e) =>
-          e.id === experienceId
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
             ? {
-                ...e,
-                likeLoading:
-                  false,
+                ...experience,
+                likeLoading: false,
               }
-            : e
+            : experience
         )
       );
     }
   }
+
+  /* --------------------------------
+     Bookmark
+  --------------------------------- */
 
   async function toggleBookmark(
     experienceId: string
@@ -275,269 +380,452 @@ export default function FeedPage() {
     }
 
     const item = experiences.find(
-      (e) =>
-        e.id ===
-        experienceId
+      (experience) =>
+        experience.id === experienceId
     );
 
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
     if (item.bookmarked) {
-      await supabase
-        .from("bookmarks")
-        .delete()
-        .eq(
-          "experience_id",
-          experienceId
-        )
-        .eq(
-          "user_id",
-          user.id
-        );
+      const { error } =
+        await supabase
+          .from("bookmarks")
+          .delete()
+          .eq(
+            "experience_id",
+            experienceId
+          )
+          .eq(
+            "user_id",
+            user.id
+          );
 
-      setExperiences((prev) =>
-        prev.map((e) =>
-          e.id ===
-          experienceId
+      if (error) {
+        console.error(
+          "Error removing bookmark:",
+          error
+        );
+        return;
+      }
+
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
             ? {
-                ...e,
-                bookmarked:
-                  false,
+                ...experience,
+                bookmarked: false,
               }
-            : e
+            : experience
         )
       );
     } else {
-      await supabase
-        .from("bookmarks")
-        .insert({
-          user_id: user.id,
-          experience_id:
-            experienceId,
-        });
+      const { error } =
+        await supabase
+          .from("bookmarks")
+          .insert({
+            user_id: user.id,
+            experience_id:
+              experienceId,
+          });
 
-      setExperiences((prev) =>
-        prev.map((e) =>
-          e.id ===
-          experienceId
+      if (error) {
+        console.error(
+          "Error adding bookmark:",
+          error
+        );
+        return;
+      }
+
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
             ? {
-                ...e,
-                bookmarked:
-                  true,
+                ...experience,
+                bookmarked: true,
               }
-            : e
+            : experience
         )
       );
     }
   }
 
-  const categories =
-    useMemo(() => {
-      return [
-        "All",
-        ...new Set(
-          experiences.map(
-            (e) =>
-              e.category
-          )
-        ),
-      ];
-    }, [experiences]);
+  /* --------------------------------
+     Categories
+  --------------------------------- */
 
-  const filteredExperiences =
-    experiences.filter(
-      (e) => {
-        const matchesSearch =
-          e.title
-            .toLowerCase()
-            .includes(
-              search.toLowerCase()
-            ) ||
-          e.story
-            .toLowerCase()
-            .includes(
-              search.toLowerCase()
-            );
+  const categories = useMemo(() => {
+    const uniqueCategories =
+      new Map<string, string>();
 
-        const matchesCategory =
-          selectedCategory ===
-            "All" ||
-          e.category ===
-            selectedCategory;
+    experiences.forEach(
+      (experience) => {
+        const clean =
+          cleanCategory(
+            experience.category
+          );
 
-        return (
-          matchesSearch &&
-          matchesCategory
-        );
+        if (!uniqueCategories.has(clean)) {
+          uniqueCategories.set(
+            clean,
+            experience.category
+          );
+        }
       }
     );
 
+    return [
+      "All",
+      ...Array.from(
+        uniqueCategories.keys()
+      ),
+    ];
+  }, [experiences]);
+
+  /* --------------------------------
+     Filter feed
+  --------------------------------- */
+
+  const filteredExperiences =
+    useMemo(() => {
+      const searchTerm =
+        search.trim().toLowerCase();
+
+      return experiences.filter(
+        (experience) => {
+          const cleanExperienceCategory =
+            cleanCategory(
+              experience.category
+            );
+
+          const matchesSearch =
+            !searchTerm ||
+            experience.title
+              .toLowerCase()
+              .includes(searchTerm) ||
+            experience.story
+              .toLowerCase()
+              .includes(searchTerm) ||
+            cleanExperienceCategory
+              .toLowerCase()
+              .includes(searchTerm) ||
+            experience.profile?.display_name
+              ?.toLowerCase()
+              .includes(searchTerm) ||
+            experience.profile?.username
+              ?.toLowerCase()
+              .includes(searchTerm);
+
+          const matchesCategory =
+            selectedCategory === "All" ||
+            cleanExperienceCategory ===
+              selectedCategory;
+
+          return (
+            matchesSearch &&
+            matchesCategory
+          );
+        }
+      );
+    }, [
+      experiences,
+      search,
+      selectedCategory,
+    ]);
+
+  /* --------------------------------
+     Loading
+  --------------------------------- */
+
   if (loading) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        Loading feed...
+      <main className="min-h-screen bg-black text-white">
+        <div className="mx-auto max-w-4xl px-6 py-16">
+          <div className="h-10 w-48 animate-pulse rounded-xl bg-zinc-900" />
+
+          <div className="mt-8 h-14 w-full animate-pulse rounded-2xl bg-zinc-900" />
+
+          <div className="mt-8 h-80 w-full animate-pulse rounded-3xl bg-zinc-900" />
+        </div>
       </main>
     );
   }
 
+  /* --------------------------------
+     UI
+  --------------------------------- */
+
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mx-auto max-w-4xl px-5 py-10 sm:px-6">
 
-        <h1 className="text-5xl font-bold mb-8">
-          Home Feed
-        </h1>
+        {/* Header */}
 
-        <input
-          type="text"
-          placeholder="Search experiences..."
-          value={search}
-          onChange={(e) =>
-            setSearch(
-              e.target.value
-            )
-          }
-                    className="w-full rounded-2xl border border-gray-800 bg-zinc-900 px-5 py-4 outline-none mb-6"
-        />
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            Home Feed
+          </h1>
 
-        <div className="flex flex-wrap gap-3 mb-10">
+          <p className="mt-2 text-gray-500">
+            Real experiences from people like you.
+          </p>
+        </div>
+
+        {/* Search */}
+
+        <div className="relative mb-6">
+          <input
+            type="text"
+            placeholder="Search experiences, people, or topics..."
+            value={search}
+            onChange={(event) =>
+              setSearch(
+                event.target.value
+              )
+            }
+            className="w-full rounded-2xl border border-white/10 bg-zinc-900/80 px-5 py-4 text-white outline-none transition placeholder:text-gray-500 focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/10"
+          />
+        </div>
+
+        {/* Categories */}
+
+        <div className="mb-10 flex gap-3 overflow-x-auto pb-2">
           {categories.map(
-            (category) => (
-              <button
-                key={category}
-                onClick={() =>
-                  setSelectedCategory(
-                    category
-                  )
-                }
-                className={`rounded-full px-4 py-2 transition ${
-                  selectedCategory ===
-                  category
-                    ? "bg-purple-600"
-                    : "bg-zinc-900 border border-gray-800"
-                }`}
-              >
-                {category}
-              </button>
-            )
+            (category) => {
+              const isSelected =
+                selectedCategory ===
+                category;
+
+              const isAll =
+                category === "All";
+
+              return (
+                <button
+                  key={category}
+                  onClick={() =>
+                    setSelectedCategory(
+                      category
+                    )
+                  }
+                  className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+                    isSelected
+                      ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20"
+                      : "border border-white/10 bg-zinc-900 text-gray-300 hover:border-purple-500/40 hover:text-white"
+                  }`}
+                >
+                  {!isAll && (
+                    <span>
+                      {getCategoryIcon(
+                        category
+                      )}
+                    </span>
+                  )}
+
+                  {category}
+                </button>
+              );
+            }
           )}
         </div>
 
-        <div className="space-y-8">
+        {/* Feed */}
+
+        <div className="space-y-6">
           {filteredExperiences.map(
-            (experience) => (
-              <div
-                key={experience.id}
-                className="rounded-3xl border border-gray-800 bg-zinc-950 p-6"
-              >
-                <Link
-                  href={`/u/${experience.user_id}`}
-                  className="flex items-center gap-4 mb-5"
+            (experience) => {
+              const profile =
+                experience.profile;
+
+              const profileUrl = `/u/${
+                profile?.username ||
+                experience.user_id
+              }`;
+
+              const displayName =
+                profile?.display_name ||
+                "Anonymous";
+
+              const username =
+                profile?.username;
+
+              const category =
+                cleanCategory(
+                  experience.category
+                );
+
+              return (
+                <article
+                  key={experience.id}
+                  className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 transition hover:border-white/20"
                 >
-                  <img
-                    src={
-                      experience.profile
-                        ?.avatar_url ||
-                      "/default-avatar.png"
-                    }
-                    alt="avatar"
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
 
-                  <div>
-                    <p className="font-semibold">
-                      {experience
-                        .profile
-                        ?.display_name ||
-                        "Anonymous"}
-                    </p>
+                  {/* Author */}
 
-                    <p className="text-sm text-gray-500">
-                      {new Date(
-                        experience.created_at
-                      ).toLocaleDateString()}
-                    </p>
+                  <div className="flex items-center justify-between px-5 pt-5 sm:px-7 sm:pt-7">
+                    <Link
+                      href={profileUrl}
+                      className="group flex items-center gap-3"
+                    >
+                      <img
+                        src={
+                          profile?.avatar_url ||
+                          "/default-avatar.png"
+                        }
+                        alt={`${displayName}'s avatar`}
+                        className="h-12 w-12 rounded-full border border-white/10 object-cover"
+                      />
+
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white transition group-hover:text-purple-300">
+                          {displayName}
+                        </p>
+
+                        {username && (
+                          <p className="text-sm text-purple-400">
+                            @{username}
+                          </p>
+                        )}
+
+                        <p className="text-xs text-gray-500">
+                          {formatDate(
+                            experience.created_at
+                          )}
+                        </p>
+                      </div>
+                    </Link>
                   </div>
-                </Link>
 
-                <ExperienceCard
-                  experience={
-                    experience
-                  }
-                />
+                  {/* Experience */}
 
-                <div className="mt-5 flex gap-4">
+                  <div className="px-5 pb-5 pt-5 sm:px-7 sm:pb-7">
 
-                  <button
-                    onClick={() =>
-                      toggleLike(
-                        experience.id
-                      )
-                    }
-                    disabled={
-                      experience.likeLoading
-                    }
-                    className={`rounded-xl px-5 py-3 transition ${
-                      experience.liked
-                        ? "bg-red-600 text-white"
-                        : "bg-purple-600 text-white"
-                    } ${
-                      experience.likeLoading
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
-                  >
-                    {experience.liked
-                      ? "❤️ Liked"
-                      : "🤍 Like"}{" "}
-                    (
-                    {
-                      experience.likeCount
-                    }
-                    )
-                  </button>
+                    {/* Category */}
 
-                  <button
-                    onClick={() =>
-                      toggleBookmark(
-                        experience.id
-                      )
-                    }
-                    className={`rounded-xl px-5 py-3 ${
-                      experience.bookmarked
-                        ? "border border-yellow-500 bg-yellow-500/20 text-yellow-300"
-                        : "border border-gray-700"
-                    }`}
-                  >
-                    {experience.bookmarked
-                      ? "🔖 Bookmarked"
-                      : "🔖 Bookmark"}
-                  </button>
+                    <div className="mb-4">
+                      <span className="inline-flex items-center gap-2 rounded-full bg-purple-500/10 px-3.5 py-1.5 text-sm font-medium text-purple-300">
+                        <span>
+                          {getCategoryIcon(
+                            category
+                          )}
+                        </span>
 
-                </div>
+                        {category}
+                      </span>
+                    </div>
 
-              </div>
-            )
+                    {/* Title */}
+
+                    <h2 className="text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl">
+                      {experience.title}
+                    </h2>
+
+                    {/* Story */}
+
+                    <p className="mt-4 line-clamp-4 text-[15px] leading-7 text-gray-400 sm:text-base">
+                      {experience.story}
+                    </p>
+
+                    {/* Read More */}
+
+                    <Link
+                      href={`/experiences/${experience.id}`}
+                      className="mt-5 inline-flex items-center font-semibold text-purple-400 transition hover:text-purple-300"
+                    >
+                      Read More
+                      <span className="ml-1">
+                        →
+                      </span>
+                    </Link>
+                  </div>
+
+                  {/* Actions */}
+
+                  <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-4 sm:px-7">
+                    <button
+                      onClick={() =>
+                        toggleLike(
+                          experience.id
+                        )
+                      }
+                      disabled={
+                        experience.likeLoading
+                      }
+                      className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                        experience.liked
+                          ? "bg-red-500 text-white hover:bg-red-600"
+                          : "border border-white/10 bg-zinc-900 text-gray-300 hover:border-red-500/40 hover:text-white"
+                      } ${
+                        experience.likeLoading
+                          ? "cursor-not-allowed opacity-50"
+                          : ""
+                      }`}
+                    >
+                      {experience.liked
+                        ? "❤️ Liked"
+                        : "🤍 Like"}{" "}
+                      ({experience.likeCount})
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        toggleBookmark(
+                          experience.id
+                        )
+                      }
+                      className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                        experience.bookmarked
+                          ? "border border-yellow-500/50 bg-yellow-500/10 text-yellow-300"
+                          : "border border-white/10 bg-zinc-900 text-gray-300 hover:border-yellow-500/40 hover:text-white"
+                      }`}
+                    >
+                      {experience.bookmarked
+                        ? "🔖 Bookmarked"
+                        : "🔖 Bookmark"}
+                    </button>
+                  </div>
+                </article>
+              );
+            }
           )}
+
+          {/* Empty state */}
 
           {filteredExperiences.length ===
             0 && (
-            <div className="rounded-3xl border border-gray-800 bg-zinc-900 p-12 text-center">
-              <h2 className="text-2xl font-bold mb-3">
+            <div className="rounded-3xl border border-white/10 bg-zinc-950 px-6 py-16 text-center">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/10 text-3xl">
+                🔎
+              </div>
+
+              <h2 className="text-2xl font-bold">
                 No experiences found
               </h2>
 
-              <p className="text-gray-400">
-                Try another search or
-                category.
+              <p className="mx-auto mt-2 max-w-md text-gray-500">
+                Try another search or choose
+                a different category.
               </p>
+
+              {(search ||
+                selectedCategory !==
+                  "All") && (
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setSelectedCategory(
+                      "All"
+                    );
+                  }}
+                  className="mt-6 rounded-xl bg-purple-600 px-5 py-2.5 font-semibold transition hover:bg-purple-500"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           )}
-
         </div>
-
       </div>
-
     </main>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import EditProfileModal from "@/components/EditProfileModal";
 import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 
@@ -24,6 +25,25 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const [open, setOpen] = useState(false);
   const [avatar, setAvatar] = useState(avatarUrl);
+  const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    loadUsername();
+  }, [user.id]);
+
+  useEffect(() => {
+    setAvatar(avatarUrl);
+  }, [avatarUrl]);
+
+  async function loadUsername() {
+    const { data } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    setUsername(data?.username || "");
+  }
 
   const name =
     displayName ||
@@ -34,9 +54,7 @@ export default function ProfileHeader({
   return (
     <>
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-
         <div className="flex items-center gap-6">
-
           {avatar ? (
             <img
               src={avatar}
@@ -50,10 +68,15 @@ export default function ProfileHeader({
           )}
 
           <div>
-
             <h2 className="text-3xl font-bold">
               {name}
             </h2>
+
+            {username && (
+              <p className="mt-1 text-purple-400">
+                @{username}
+              </p>
+            )}
 
             <p className="mt-2 text-gray-400">
               {user.email}
@@ -68,11 +91,8 @@ export default function ProfileHeader({
               currentAvatar={avatar}
               onUploadComplete={(url) => setAvatar(url)}
             />
-
           </div>
-
         </div>
-
 
         <button
           onClick={() => setOpen(true)}
@@ -80,12 +100,9 @@ export default function ProfileHeader({
         >
           ✏️ Edit Profile
         </button>
-
       </div>
 
-
       <div className="mt-10 grid gap-6 md:grid-cols-3">
-
         <div className="rounded-2xl border border-gray-800 bg-black/30 p-6">
           <p className="text-sm text-gray-400">
             Total Experiences
@@ -95,7 +112,6 @@ export default function ProfileHeader({
             {experienceCount}
           </h3>
         </div>
-
 
         <div className="rounded-2xl border border-gray-800 bg-black/30 p-6">
           <p className="text-sm text-gray-400">
@@ -107,7 +123,6 @@ export default function ProfileHeader({
           </h3>
         </div>
 
-
         <div className="rounded-2xl border border-gray-800 bg-black/30 p-6">
           <p className="text-sm text-gray-400">
             Saved Experiences
@@ -117,9 +132,7 @@ export default function ProfileHeader({
             Coming Soon
           </h3>
         </div>
-
       </div>
-
 
       <EditProfileModal
         open={open}
@@ -129,7 +142,6 @@ export default function ProfileHeader({
         displayName={displayName}
         bio={bio}
       />
-
     </>
   );
 }

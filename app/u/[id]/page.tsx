@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 type Profile = {
   id: string;
   display_name: string;
+  username: string;
   bio: string;
   avatar_url: string;
 };
@@ -54,11 +55,42 @@ export default function PublicProfilePage() {
 
     setCurrentUserId(user?.id || null);
 
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const profileKey = Array.isArray(id) ? id[0] : id;
+
+    let profileData = null;
+
+    // First try username.
+    const { data: usernameProfile } =
+      await supabase
+        .from("profiles")
+        .select(
+          "id,display_name,username,bio,avatar_url"
+        )
+        .ilike("username", profileKey)
+        .maybeSingle();
+
+    if (usernameProfile) {
+      profileData = usernameProfile;
+    } else {
+      // Keep old UUID profile links working.
+      const { data: idProfile } =
+        await supabase
+          .from("profiles")
+          .select(
+            "id,display_name,username,bio,avatar_url"
+          )
+          .eq("id", profileKey)
+          .maybeSingle();
+
+      profileData = idProfile;
+    }
+
+    if (!profileData) {
+      setLoading(false);
+      return;
+    }
+
+    const profileId = profileData.id;
 
     const { data: experienceData } =
       await supabase
@@ -66,34 +98,33 @@ export default function PublicProfilePage() {
         .select(
           "id,title,category,created_at"
         )
-        .eq("user_id", id)
+        .eq("user_id", profileId)
         .order("created_at", {
           ascending: false,
         });
 
-    if (profileData) {
-      const googleName =
-        profileData.id === user?.id
-          ? user?.user_metadata?.full_name ||
-            user?.user_metadata?.name ||
-            ""
-          : "";
+    const googleName =
+      profileId === user?.id
+        ? user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          ""
+        : "";
 
-      setProfile({
-        ...profileData,
-        display_name:
-          profileData.display_name?.trim() ||
-          googleName ||
-          "Relata User",
-        avatar_url:
-          profileData.avatar_url ||
-          (profileData.id === user?.id
-            ? user?.user_metadata?.avatar_url ||
-              user?.user_metadata?.picture ||
-              ""
-            : ""),
-      });
-    }
+    setProfile({
+      ...profileData,
+      display_name:
+        profileData.display_name?.trim() ||
+        googleName ||
+        "Relata User",
+      username: profileData.username || "",
+      avatar_url:
+        profileData.avatar_url ||
+        (profileId === user?.id
+          ? user?.user_metadata?.avatar_url ||
+            user?.user_metadata?.picture ||
+            ""
+          : ""),
+    });
 
     setExperiences(experienceData || []);
 
@@ -104,7 +135,7 @@ export default function PublicProfilePage() {
           count: "exact",
           head: true,
         })
-        .eq("following_id", id);
+        .eq("following_id", profileId);
 
     const { count: followingCount } =
       await supabase
@@ -113,18 +144,18 @@ export default function PublicProfilePage() {
           count: "exact",
           head: true,
         })
-        .eq("follower_id", id);
+        .eq("follower_id", profileId);
 
     setFollowers(followerCount || 0);
     setFollowing(followingCount || 0);
 
-    if (user && user.id !== id) {
+    if (user && user.id !== profileId) {
       const { data: followData } =
         await supabase
           .from("follows")
           .select("id")
           .eq("follower_id", user.id)
-          .eq("following_id", id)
+          .eq("following_id", profileId)
           .maybeSingle();
 
       setIsFollowing(!!followData);
@@ -134,11 +165,15 @@ export default function PublicProfilePage() {
   }
 
   async function handleFollow() {
-    if (!currentUserId || !id || followBusy) {
+    if (
+      !currentUserId ||
+      !profile ||
+      followBusy
+    ) {
       return;
     }
 
-    if (currentUserId === id) {
+    if (currentUserId === profile.id) {
       return;
     }
 
@@ -148,8 +183,14 @@ export default function PublicProfilePage() {
       const { error } = await supabase
         .from("follows")
         .delete()
-        .eq("follower_id", currentUserId)
-        .eq("following_id", id);
+        .eq(
+          "follower_id",
+          currentUserId
+        )
+        .eq(
+          "following_id",
+          profile.id
+        );
 
       if (!error) {
         setIsFollowing(false);
@@ -162,7 +203,7 @@ export default function PublicProfilePage() {
         .from("follows")
         .insert({
           follower_id: currentUserId,
-          following_id: id,
+          following_id: profile.id,
         });
 
       if (!error) {
@@ -215,6 +256,12 @@ export default function PublicProfilePage() {
             {profile.display_name || "Relata User"}
           </h1>
 
+          {profile.username && (
+            <p className="mt-2 text-purple-400">
+              @{profile.username}
+            </p>
+          )}
+
           <p className="mt-3 max-w-2xl text-gray-400">
             {profile.bio || "No bio added yet."}
           </p>
@@ -240,7 +287,6 @@ export default function PublicProfilePage() {
               <p className="text-sm text-gray-400">
                 Experiences
               </p>
-
               <h2 className="mt-2 text-3xl font-bold text-purple-400">
                 {experiences.length}
               </h2>
@@ -250,7 +296,6 @@ export default function PublicProfilePage() {
               <p className="text-sm text-gray-400">
                 Followers
               </p>
-
               <h2 className="mt-2 text-3xl font-bold text-purple-400">
                 {followers}
               </h2>
@@ -260,7 +305,6 @@ export default function PublicProfilePage() {
               <p className="text-sm text-gray-400">
                 Following
               </p>
-
               <h2 className="mt-2 text-3xl font-bold text-purple-400">
                 {following}
               </h2>
