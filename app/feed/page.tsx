@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import AppNav from "@/components/AppNav";
 
 type Experience = {
   id: string;
@@ -29,10 +30,6 @@ type FeedExperience = Experience & {
   likeLoading: boolean;
 };
 
-/* --------------------------------
-   Category helpers
---------------------------------- */
-
 function cleanCategory(category: string) {
   return category
     .replace(
@@ -43,7 +40,8 @@ function cleanCategory(category: string) {
 }
 
 function getCategoryIcon(category: string) {
-  const normalized = cleanCategory(category).toLowerCase();
+  const normalized =
+    cleanCategory(category).toLowerCase();
 
   if (normalized.includes("education")) {
     return "🎓";
@@ -95,10 +93,6 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString();
 }
 
-/* --------------------------------
-   Feed page
---------------------------------- */
-
 export default function FeedPage() {
   const router = useRouter();
 
@@ -111,10 +105,6 @@ export default function FeedPage() {
 
   const [selectedCategory, setSelectedCategory] =
     useState("All");
-
-  /* --------------------------------
-     Load feed
-  --------------------------------- */
 
   useEffect(() => {
     loadFeed();
@@ -242,10 +232,6 @@ export default function FeedPage() {
     setLoading(false);
   }
 
-  /* --------------------------------
-     Like
-  --------------------------------- */
-
   async function toggleLike(
     experienceId: string
   ) {
@@ -363,10 +349,6 @@ export default function FeedPage() {
     }
   }
 
-  /* --------------------------------
-     Bookmark
-  --------------------------------- */
-
   async function toggleBookmark(
     experienceId: string
   ) {
@@ -451,10 +433,6 @@ export default function FeedPage() {
     }
   }
 
-  /* --------------------------------
-     Categories
-  --------------------------------- */
-
   const categories = useMemo(() => {
     const uniqueCategories =
       new Map<string, string>();
@@ -482,10 +460,6 @@ export default function FeedPage() {
       ),
     ];
   }, [experiences]);
-
-  /* --------------------------------
-     Filter feed
-  --------------------------------- */
 
   const filteredExperiences =
     useMemo(() => {
@@ -534,13 +508,11 @@ export default function FeedPage() {
       selectedCategory,
     ]);
 
-  /* --------------------------------
-     Loading
-  --------------------------------- */
-
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white">
+        <AppNav />
+
         <div className="mx-auto max-w-4xl px-6 py-16">
           <div className="h-10 w-48 animate-pulse rounded-xl bg-zinc-900" />
 
@@ -552,15 +524,11 @@ export default function FeedPage() {
     );
   }
 
-  /* --------------------------------
-     UI
-  --------------------------------- */
-
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-4xl px-5 py-10 sm:px-6">
+    <main className="min-h-screen bg-black text-white pb-20 md:pb-0">
+      <AppNav />
 
-        {/* Header */}
+      <div className="mx-auto max-w-4xl px-5 py-10 sm:px-6">
 
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
@@ -571,8 +539,6 @@ export default function FeedPage() {
             Real experiences from people like you.
           </p>
         </div>
-
-        {/* Search */}
 
         <div className="relative mb-6">
           <input
@@ -587,8 +553,6 @@ export default function FeedPage() {
             className="w-full rounded-2xl border border-white/10 bg-zinc-900/80 px-5 py-4 text-white outline-none transition placeholder:text-gray-500 focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/10"
           />
         </div>
-
-        {/* Categories */}
 
         <div className="mb-10 flex gap-3 overflow-x-auto pb-2">
           {categories.map(
@@ -629,8 +593,6 @@ export default function FeedPage() {
           )}
         </div>
 
-        {/* Feed */}
-
         <div className="space-y-6">
           {filteredExperiences.map(
             (experience) => {
@@ -659,9 +621,6 @@ export default function FeedPage() {
                   key={experience.id}
                   className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 transition hover:border-white/20"
                 >
-
-                  {/* Author */}
-
                   <div className="flex items-center justify-between px-5 pt-5 sm:px-7 sm:pt-7">
                     <Link
                       href={profileUrl}
@@ -696,12 +655,7 @@ export default function FeedPage() {
                     </Link>
                   </div>
 
-                  {/* Experience */}
-
                   <div className="px-5 pb-5 pt-5 sm:px-7 sm:pb-7">
-
-                    {/* Category */}
-
                     <div className="mb-4">
                       <span className="inline-flex items-center gap-2 rounded-full bg-purple-500/10 px-3.5 py-1.5 text-sm font-medium text-purple-300">
                         <span>
@@ -714,19 +668,13 @@ export default function FeedPage() {
                       </span>
                     </div>
 
-                    {/* Title */}
-
                     <h2 className="text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl">
                       {experience.title}
                     </h2>
 
-                    {/* Story */}
-
                     <p className="mt-4 line-clamp-4 text-[15px] leading-7 text-gray-400 sm:text-base">
                       {experience.story}
                     </p>
-
-                    {/* Read More */}
 
                     <Link
                       href={`/experiences/${experience.id}`}
@@ -738,8 +686,6 @@ export default function FeedPage() {
                       </span>
                     </Link>
                   </div>
-
-                  {/* Actions */}
 
                   <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-4 sm:px-7">
                     <button
@@ -788,8 +734,6 @@ export default function FeedPage() {
               );
             }
           )}
-
-          {/* Empty state */}
 
           {filteredExperiences.length ===
             0 && (
