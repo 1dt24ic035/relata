@@ -21,21 +21,15 @@ type Experience = {
 };
 
 export default function PublicProfilePage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id;
 
-  const [profile, setProfile] =
-    useState<Profile | null>(null);
-
-  const [experiences, setExperiences] =
-    useState<Experience[]>([]);
-
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] =
-    useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  const [isFollowing, setIsFollowing] =
-    useState(false);
-
+  const [isFollowing, setIsFollowing] = useState(false);
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [followBusy, setFollowBusy] = useState(false);
@@ -57,30 +51,30 @@ export default function PublicProfilePage() {
 
     const profileKey = Array.isArray(id) ? id[0] : id;
 
-    let profileData = null;
+    if (!profileKey) {
+      setLoading(false);
+      return;
+    }
+
+    let profileData: Profile | null = null;
 
     // First try username.
-    const { data: usernameProfile } =
+    const { data: usernameProfile, error: usernameError } =
       await supabase
         .from("profiles")
-        .select(
-          "id,display_name,username,bio,avatar_url"
-        )
+        .select("id,display_name,username,bio,avatar_url")
         .ilike("username", profileKey)
         .maybeSingle();
 
-    if (usernameProfile) {
+    if (!usernameError && usernameProfile) {
       profileData = usernameProfile;
     } else {
       // Keep old UUID profile links working.
-      const { data: idProfile } =
-        await supabase
-          .from("profiles")
-          .select(
-            "id,display_name,username,bio,avatar_url"
-          )
-          .eq("id", profileKey)
-          .maybeSingle();
+      const { data: idProfile } = await supabase
+        .from("profiles")
+        .select("id,display_name,username,bio,avatar_url")
+        .eq("id", profileKey)
+        .maybeSingle();
 
       profileData = idProfile;
     }
@@ -92,16 +86,13 @@ export default function PublicProfilePage() {
 
     const profileId = profileData.id;
 
-    const { data: experienceData } =
-      await supabase
-        .from("experiences")
-        .select(
-          "id,title,category,created_at"
-        )
-        .eq("user_id", profileId)
-        .order("created_at", {
-          ascending: false,
-        });
+    const { data: experienceData } = await supabase
+      .from("experiences")
+      .select("id,title,category,created_at")
+      .eq("user_id", profileId)
+      .order("created_at", {
+        ascending: false,
+      });
 
     const googleName =
       profileId === user?.id
@@ -117,6 +108,7 @@ export default function PublicProfilePage() {
         googleName ||
         "Relata User",
       username: profileData.username || "",
+      bio: profileData.bio || "",
       avatar_url:
         profileData.avatar_url ||
         (profileId === user?.id
@@ -128,48 +120,46 @@ export default function PublicProfilePage() {
 
     setExperiences(experienceData || []);
 
-    const { count: followerCount } =
-      await supabase
-        .from("follows")
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
-        .eq("following_id", profileId);
+    // Followers
+    const { count: followerCount } = await supabase
+      .from("follows")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("following_id", profileId);
 
-    const { count: followingCount } =
-      await supabase
-        .from("follows")
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
-        .eq("follower_id", profileId);
+    // Following
+    const { count: followingCount } = await supabase
+      .from("follows")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("follower_id", profileId);
 
     setFollowers(followerCount || 0);
     setFollowing(followingCount || 0);
 
+    // Check whether current user follows this profile.
     if (user && user.id !== profileId) {
-      const { data: followData } =
-        await supabase
-          .from("follows")
-          .select("id")
-          .eq("follower_id", user.id)
-          .eq("following_id", profileId)
-          .maybeSingle();
+      const { data: followData } = await supabase
+        .from("follows")
+        .select("id")
+        .eq("follower_id", user.id)
+        .eq("following_id", profileId)
+        .maybeSingle();
 
       setIsFollowing(!!followData);
+    } else {
+      setIsFollowing(false);
     }
 
     setLoading(false);
   }
 
   async function handleFollow() {
-    if (
-      !currentUserId ||
-      !profile ||
-      followBusy
-    ) {
+    if (!currentUserId || !profile || followBusy) {
       return;
     }
 
@@ -183,20 +173,12 @@ export default function PublicProfilePage() {
       const { error } = await supabase
         .from("follows")
         .delete()
-        .eq(
-          "follower_id",
-          currentUserId
-        )
-        .eq(
-          "following_id",
-          profile.id
-        );
+        .eq("follower_id", currentUserId)
+        .eq("following_id", profile.id);
 
       if (!error) {
         setIsFollowing(false);
-        setFollowers((value) =>
-          Math.max(0, value - 1)
-        );
+        setFollowers((value) => Math.max(0, value - 1));
       }
     } else {
       const { error } = await supabase
@@ -231,8 +213,7 @@ export default function PublicProfilePage() {
     );
   }
 
-  const isOwnProfile =
-    currentUserId === profile.id;
+  const isOwnProfile = currentUserId === profile.id;
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -276,9 +257,7 @@ export default function PublicProfilePage() {
                   : "bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:scale-105"
               }`}
             >
-              {isFollowing
-                ? "Following"
-                : "Follow"}
+              {isFollowing ? "Following" : "Follow"}
             </button>
           )}
 

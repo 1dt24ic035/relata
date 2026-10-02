@@ -32,6 +32,16 @@ type Comment = {
   } | null;
 };
 
+const reportReasons = [
+  "Spam",
+  "Harassment or bullying",
+  "Hate or discrimination",
+  "False or misleading information",
+  "Inappropriate or offensive content",
+  "Self-harm or dangerous content",
+  "Other",
+];
+
 export default function ExperienceDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -43,7 +53,6 @@ export default function ExperienceDetailsPage() {
     useState<Profile | null>(null);
 
   const [loading, setLoading] = useState(true);
-
   const [isOwner, setIsOwner] = useState(false);
 
   const [liked, setLiked] = useState(false);
@@ -63,11 +72,25 @@ export default function ExperienceDetailsPage() {
   const [commentLoading, setCommentLoading] =
     useState(false);
 
-  const [commentError, setCommentError] =
-    useState("");
-
   const [currentUserId, setCurrentUserId] =
     useState<string | null>(null);
+
+  const [reportOpen, setReportOpen] =
+    useState(false);
+
+  const [reportReason, setReportReason] =
+    useState("");
+
+  const [reportDetails, setReportDetails] =
+    useState("");
+
+  const [reportLoading, setReportLoading] =
+    useState(false);
+
+  const [reportResult, setReportResult] =
+    useState<"submitted" | "already_submitted" | null>(
+      null
+    );
 
   useEffect(() => {
     loadExperience();
@@ -96,20 +119,7 @@ export default function ExperienceDetailsPage() {
         ascending: false,
       });
 
-    if (error) {
-      console.error(
-        "Load comments error:",
-        error.message,
-        error.code,
-        error.details,
-        error.hint
-      );
-
-      setComments([]);
-      return;
-    }
-
-    if (!data) {
+    if (error || !data) {
       setComments([]);
       return;
     }
@@ -251,14 +261,8 @@ export default function ExperienceDetailsPage() {
         await refreshLikeCount();
 
       setLikeCount(latestCount);
-    } catch (error: any) {
-      console.error(
-        "Like error:",
-        error?.message,
-        error?.code,
-        error?.details,
-        error?.hint
-      );
+    } catch (error) {
+      console.error(error);
 
       setLiked(previousLiked);
       setLikeCount(previousCount);
@@ -278,58 +282,29 @@ export default function ExperienceDetailsPage() {
     }
 
     if (bookmarked) {
-      const { error } = await supabase
+      await supabase
         .from("bookmarks")
         .delete()
         .eq("experience_id", id)
         .eq("user_id", user.id);
 
-      if (error) {
-        console.error(
-          "Bookmark delete error:",
-          error.message
-        );
-        return;
-      }
-
       setBookmarked(false);
     } else {
-      const { error } = await supabase
+      await supabase
         .from("bookmarks")
         .insert({
           user_id: user.id,
           experience_id: id,
         });
 
-      if (error) {
-        console.error(
-          "Bookmark insert error:",
-          error.message
-        );
-        return;
-      }
-
       setBookmarked(true);
     }
   }
 
   async function addComment() {
-    setCommentError("");
-
     const {
       data: { user },
-      error: userError,
     } = await supabase.auth.getUser();
-
-    if (userError) {
-      const message =
-        userError.message ||
-        "Unable to verify your login session.";
-
-      console.error("Auth error:", message);
-      setCommentError(message);
-      return;
-    }
 
     if (!user) {
       router.push("/login");
@@ -342,67 +317,24 @@ export default function ExperienceDetailsPage() {
 
     setCommentLoading(true);
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("comments")
       .insert({
         user_id: user.id,
         experience_id: id,
         content,
-      })
-      .select(
-        "id, user_id, experience_id, content, created_at"
-      )
-      .single();
-
-    if (error) {
-      const message = [
-        error.message,
-        error.code
-          ? `Code: ${error.code}`
-          : "",
-        error.details
-          ? `Details: ${error.details}`
-          : "",
-        error.hint
-          ? `Hint: ${error.hint}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" | ");
-
-      console.error("Comment insert error:", {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
       });
 
-      setCommentError(
-        message || "Failed to post comment."
-      );
-
+    if (error) {
+      console.error(error);
       setCommentLoading(false);
       return;
     }
 
-    if (data) {
-      const { data: profileData } =
-        await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("id", user.id)
-          .single();
-
-      setComments((prev) => [
-        {
-          ...data,
-          profile: profileData,
-        },
-        ...prev,
-      ]);
-    }
-
     setCommentText("");
+
+    await loadComments();
+
     setCommentLoading(false);
   }
 
@@ -415,13 +347,7 @@ export default function ExperienceDetailsPage() {
       .eq("id", commentId);
 
     if (error) {
-      console.error(
-        "Delete comment error:",
-        error.message,
-        error.code,
-        error.details,
-        error.hint
-      );
+      console.error(error);
       return;
     }
 
@@ -450,6 +376,60 @@ export default function ExperienceDetailsPage() {
     }
 
     router.push("/profile");
+  }
+
+  async function submitReport() {
+    if (!reportReason) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    setReportLoading(true);
+
+    const { error } = await supabase
+      .from("reports")
+      .insert({
+        reporter_id: user.id,
+        experience_id: id,
+        reason: reportReason,
+        details:
+          reportDetails.trim() || null,
+      });
+
+    if (error) {
+      console.error("Error submitting report:", error);
+
+      if (error.code === "23505") {
+        setReportResult("already_submitted");
+        setReportLoading(false);
+        return;
+      }
+
+      alert(
+        "Could not submit your report. Please try again."
+      );
+
+      setReportLoading(false);
+      return;
+    }
+
+    setReportResult("submitted");
+    setReportLoading(false);
+  }
+
+  function closeReportModal() {
+    if (reportLoading) return;
+
+    setReportOpen(false);
+    setReportReason("");
+    setReportDetails("");
+    setReportResult(null);
   }
 
   if (loading) {
@@ -511,9 +491,7 @@ export default function ExperienceDetailsPage() {
                 </Link>
 
                 <button
-                  onClick={
-                    deleteExperience
-                  }
+                  onClick={deleteExperience}
                   className="rounded-lg border border-red-500 px-4 py-2 text-sm text-red-400 hover:bg-red-600 hover:text-white"
                 >
                   🗑 Delete
@@ -575,7 +553,7 @@ export default function ExperienceDetailsPage() {
                 : "bg-gradient-to-r from-purple-600 to-pink-500 hover:scale-105"
             } ${
               likeLoading
-                ? "cursor-not-allowed"
+                ? "cursor-not-allowed opacity-70"
                 : ""
             }`}
           >
@@ -597,6 +575,18 @@ export default function ExperienceDetailsPage() {
               ? "🔖 Bookmarked"
               : "🔖 Bookmark"}
           </button>
+
+          {!isOwner && (
+            <button
+              onClick={() => {
+                setReportResult(null);
+                setReportOpen(true);
+              }}
+              className="rounded-xl border border-gray-700 px-6 py-3 font-semibold text-gray-400 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-300"
+            >
+              🚩 Report
+            </button>
+          )}
         </div>
 
         {/* Comments */}
@@ -608,20 +598,13 @@ export default function ExperienceDetailsPage() {
           <div className="mb-8 flex flex-col gap-4">
             <textarea
               value={commentText}
-              onChange={(e) => {
-                setCommentText(e.target.value);
-                setCommentError("");
-              }}
+              onChange={(e) =>
+                setCommentText(e.target.value)
+              }
               placeholder="Share your thoughts..."
               rows={4}
               className="w-full resize-none rounded-2xl border border-gray-700 bg-black px-5 py-4 text-white outline-none placeholder:text-gray-600 focus:border-purple-500"
             />
-
-            {commentError && (
-              <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                {commentError}
-              </div>
-            )}
 
             <div className="flex justify-end">
               <button
@@ -691,6 +674,174 @@ export default function ExperienceDetailsPage() {
           )}
         </div>
       </section>
+
+      {/* Report Modal */}
+      {reportOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-5 py-8 backdrop-blur-sm"
+          onClick={closeReportModal}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-zinc-950 p-7 shadow-2xl"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+            {reportResult === "submitted" ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 text-3xl">
+                  ✓
+                </div>
+
+                <h2 className="mt-5 text-2xl font-bold">
+                  Report submitted
+                </h2>
+
+                <p className="mx-auto mt-3 max-w-sm leading-6 text-gray-500">
+                  Thanks for helping keep Relata
+                  safe. Our moderation team will
+                  review this report.
+                </p>
+
+                <button
+                  onClick={closeReportModal}
+                  className="mt-7 rounded-xl bg-purple-600 px-6 py-3 font-semibold transition hover:bg-purple-500"
+                >
+                  Done
+                </button>
+              </div>
+            ) : reportResult ===
+              "already_submitted" ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-500/10 text-3xl">
+                  🚩
+                </div>
+
+                <h2 className="mt-5 text-2xl font-bold">
+                  Already reported
+                </h2>
+
+                <p className="mx-auto mt-3 max-w-sm leading-6 text-gray-500">
+                  You have already submitted a
+                  report for this experience. You
+                  don't need to report it again.
+                </p>
+
+                <button
+                  onClick={closeReportModal}
+                  className="mt-7 rounded-xl bg-zinc-800 px-6 py-3 font-semibold text-white transition hover:bg-zinc-700"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-5">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-wider text-red-400">
+                      Report
+                    </p>
+
+                    <h2 className="mt-2 text-2xl font-bold">
+                      Report this experience
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-gray-500">
+                      Tell us what is wrong with this
+                      content. Your report will be
+                      reviewed by Relata moderators.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={closeReportModal}
+                    className="rounded-full p-2 text-gray-500 transition hover:bg-white/5 hover:text-white"
+                    aria-label="Close report dialog"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="mt-7">
+                  <label className="mb-3 block text-sm font-semibold text-gray-300">
+                    Why are you reporting this?
+                  </label>
+
+                  <div className="space-y-2">
+                    {reportReasons.map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() =>
+                          setReportReason(reason)
+                        }
+                        className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition ${
+                          reportReason === reason
+                            ? "border-red-500/50 bg-red-500/10 text-red-300"
+                            : "border-white/10 bg-black text-gray-400 hover:border-white/20 hover:text-white"
+                        }`}
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <label
+                    htmlFor="report-details"
+                    className="mb-2 block text-sm font-semibold text-gray-300"
+                  >
+                    Additional details
+                    <span className="ml-2 font-normal text-gray-600">
+                      Optional
+                    </span>
+                  </label>
+
+                  <textarea
+                    id="report-details"
+                    value={reportDetails}
+                    onChange={(e) =>
+                      setReportDetails(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Give moderators more context..."
+                    rows={4}
+                    maxLength={1000}
+                    className="w-full resize-none rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-red-500/50"
+                  />
+
+                  <p className="mt-2 text-right text-xs text-gray-600">
+                    {reportDetails.length}/1000
+                  </p>
+                </div>
+
+                <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    onClick={closeReportModal}
+                    disabled={reportLoading}
+                    className="rounded-xl border border-white/10 px-5 py-3 font-semibold text-gray-400 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={submitReport}
+                    disabled={
+                      !reportReason ||
+                      reportLoading
+                    }
+                    className="rounded-xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Submit Report
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
