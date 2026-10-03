@@ -2,47 +2,45 @@ export default function Stats() {
   const stats = [
     {
       icon: "🧠",
-      title: "Learn Faster",
+      title: "Learn From Experience",
       description:
-        "Learn from people who've already been through the journey you're about to start.",
+        "Discover what people learned from the journeys they've already lived.",
     },
     {
       icon: "💡",
-      title: "Avoid Costly Mistakes",
+      title: "Make Better Decisions",
       description:
-        "Discover lessons that could save you time, money, and years of trial and error.",
+        "Get practical insights that can help you make more informed choices.",
     },
     {
       icon: "🌍",
-      title: "Built by Real People",
+      title: "Real Stories From Real People",
       description:
-        "Every experience comes from someone who's lived it—not AI, not theory.",
+        "Explore genuine experiences shared by people who have actually lived them.",
     },
   ];
 
   return (
     <section className="bg-black py-24">
-      <div className="max-w-7xl mx-auto px-6">
-
-        <div className="text-center mb-16">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mb-16 text-center">
           <h2 className="text-4xl font-bold text-white">
-            Why People Will Use Relata
+            Why Relata?
           </h2>
 
-          <p className="mt-4 text-gray-400 max-w-2xl mx-auto">
-            The best advice doesn't always come from books or search engines.
-            Sometimes it comes from someone who's already lived your future.
+          <p className="mx-auto mt-4 max-w-2xl text-gray-400">
+            Real experiences can give you the perspective you need before
+            making your next decision.
           </p>
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
-
           {stats.map((item) => (
             <div
               key={item.title}
-              className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 transition duration-300 hover:border-purple-500/40 hover:scale-[1.02]"
+              className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition duration-300 hover:scale-[1.02] hover:border-purple-500/40"
             >
-              <div className="text-5xl mb-6">
+              <div className="mb-6 text-5xl">
                 {item.icon}
               </div>
 
@@ -50,12 +48,11 @@ export default function Stats() {
                 {item.title}
               </h3>
 
-              <p className="mt-4 text-gray-400 leading-7">
+              <p className="mt-4 leading-7 text-gray-400">
                 {item.description}
               </p>
             </div>
           ))}
-
         </div>
       </div>
     </section>

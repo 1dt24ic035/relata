@@ -4,13 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type NavbarProps = {
-  onJoinClick: () => void;
-};
-
-export default function Navbar({
-  onJoinClick,
-}: NavbarProps) {
+export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -21,10 +15,7 @@ export default function Navbar({
     window.addEventListener("scroll", handleScroll);
 
     return () =>
-      window.removeEventListener(
-        "scroll",
-        handleScroll
-      );
+      window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
@@ -38,10 +29,7 @@ export default function Navbar({
           }`}
         >
           {/* Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-3"
-          >
+          <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logo.png"
               alt="Relata"
@@ -57,17 +45,17 @@ export default function Navbar({
           {/* Navigation */}
           <nav className="hidden items-center gap-8 text-gray-300 md:flex">
             <Link
-              href="/search"
+              href="/explore"
               className="transition hover:text-purple-300"
             >
               Explore
             </Link>
 
             <Link
-              href="/saved"
+              href="/trending"
               className="transition hover:text-purple-300"
             >
-              Saved
+              Trending
             </Link>
 
             <a
@@ -94,12 +82,12 @@ export default function Navbar({
               Login
             </Link>
 
-            <button
-              onClick={onJoinClick}
+            <Link
+              href="/login"
               className="rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-6 py-3 font-semibold transition duration-300 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/30"
             >
-              Join Early Access
-            </button>
+              Get Started →
+            </Link>
           </div>
         </div>
       </div>

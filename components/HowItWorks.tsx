@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HowItWorks() {
   const steps = [
     {
@@ -25,31 +27,30 @@ export default function HowItWorks() {
 
   return (
     <section className="bg-black py-28 text-white">
-      <div className="max-w-7xl mx-auto px-6">
-
+      <div className="mx-auto max-w-7xl px-6">
         {/* Heading */}
-        <div className="text-center mb-20">
-          <p className="text-purple-400 font-semibold uppercase tracking-[0.3em] mb-4">
+        <div className="mb-20 text-center">
+          <p className="mb-4 font-semibold uppercase tracking-[0.3em] text-purple-400">
             HOW IT WORKS
           </p>
 
-          <h2 className="text-4xl md:text-5xl font-bold">
+          <h2 className="text-4xl font-bold md:text-5xl">
             Three Simple Steps
           </h2>
 
-          <p className="mt-5 text-lg text-gray-400 max-w-3xl mx-auto">
-            Learn from people who've already been there before making your next
-            important decision.
+          <p className="mx-auto mt-5 max-w-3xl text-lg text-gray-400">
+            Learn from people who've already been there before making your
+            next important decision.
           </p>
         </div>
 
         {/* Cards */}
         <div className="grid gap-8 md:grid-cols-3">
-
           {steps.map((step) => (
-            <div
+            <Link
               key={step.number}
-              className="group relative rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 transition-all duration-300 hover:-translate-y-2 hover:border-purple-500/40 hover:shadow-2xl hover:shadow-purple-500/10"
+              href="/login"
+              className="group relative rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-purple-500/40 hover:shadow-2xl hover:shadow-purple-500/10"
             >
               {/* Step Number */}
               <div className="absolute right-8 top-8 text-5xl font-black text-white/5">
@@ -70,11 +71,14 @@ export default function HowItWorks() {
               <p className="leading-7 text-gray-400">
                 {step.description}
               </p>
-            </div>
+
+              {/* Login hint */}
+              <p className="mt-6 text-sm font-semibold text-purple-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                Sign in to get started →
+              </p>
+            </Link>
           ))}
-
         </div>
-
       </div>
     </section>
   );

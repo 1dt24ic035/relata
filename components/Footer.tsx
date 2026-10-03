@@ -1,18 +1,21 @@
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="border-t border-white/10 bg-black text-white">
-      <div className="max-w-7xl mx-auto px-6 py-20">
-
-        {/* Top */}
+      <div className="mx-auto max-w-7xl px-6 py-20">
         <div className="grid gap-12 md:grid-cols-4">
 
           {/* Brand */}
           <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+            <Link
+              href="/"
+              className="inline-block bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-3xl font-bold text-transparent"
+            >
               Relata
-            </h2>
+            </Link>
 
-            <p className="mt-5 text-gray-400 leading-7">
+            <p className="mt-5 max-w-sm leading-7 text-gray-400">
               Learn from real experiences before making life's biggest
               decisions.
             </p>
@@ -20,70 +23,108 @@ export default function Footer() {
 
           {/* Product */}
           <div>
-            <h3 className="font-semibold mb-5">Product</h3>
+            <h3 className="mb-5 font-semibold">Product</h3>
 
             <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-white cursor-pointer transition">
-                Explore
+              <li>
+                <Link
+                  href="/explore"
+                  className="transition hover:text-white"
+                >
+                  Explore
+                </Link>
               </li>
-              <li className="hover:text-white cursor-pointer transition">
-                Categories
+
+              <li>
+                <a
+                  href="/#categories"
+                  className="transition hover:text-white"
+                >
+                  Categories
+                </a>
               </li>
-              <li className="hover:text-white cursor-pointer transition">
-                Early Access
+
+              <li>
+                <Link
+                  href="/create"
+                  className="transition hover:text-white"
+                >
+                  Create Experience
+                </Link>
               </li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h3 className="font-semibold mb-5">Company</h3>
+            <h3 className="mb-5 font-semibold">Company</h3>
 
             <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-white cursor-pointer transition">
-                About
+              <li>
+                <a
+                  href="/#about"
+                  className="transition hover:text-white"
+                >
+                  About
+                </a>
               </li>
-              <li className="hover:text-white cursor-pointer transition">
-                Roadmap
-              </li>
-              <li className="hover:text-white cursor-pointer transition">
-                Contact
+
+              <li>
+                <a
+                  href="mailto:contact@relata.app"
+                  className="transition hover:text-white"
+                >
+                  Contact
+                </a>
               </li>
             </ul>
           </div>
 
-          {/* Social */}
+          {/* Community */}
           <div>
-            <h3 className="font-semibold mb-5">Follow</h3>
+            <h3 className="mb-5 font-semibold">Community</h3>
 
             <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-white cursor-pointer transition">
-                Instagram
+              <li>
+                <a
+                  href="#"
+                  className="transition hover:text-white"
+                >
+                  Instagram
+                </a>
               </li>
-              <li className="hover:text-white cursor-pointer transition">
-                LinkedIn
+
+              <li>
+                <a
+                  href="#"
+                  className="transition hover:text-white"
+                >
+                  LinkedIn
+                </a>
               </li>
-              <li className="hover:text-white cursor-pointer transition">
-                X (Twitter)
+
+              <li>
+                <a
+                  href="#"
+                  className="transition hover:text-white"
+                >
+                  X (Twitter)
+                </a>
               </li>
             </ul>
           </div>
 
         </div>
 
-        {/* Bottom */}
-        <div className="mt-16 border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-
-          <p className="text-gray-500 text-sm">
+        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 md:flex-row">
+          <p className="text-sm text-gray-500">
             © 2026 Relata. All rights reserved.
           </p>
 
-          <p className="text-gray-500 text-sm">
+          <p className="text-sm text-gray-500">
             Built to help people make better decisions.
           </p>
-
         </div>
-
       </div>
     </footer>
   );

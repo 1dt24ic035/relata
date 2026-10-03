@@ -1,43 +1,24 @@
-"use client";
-
-"use client";
-
-import { useState } from "react";
-
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Stats from "../components/Stats";
-import WhyRelata from "../components/WhyRelata";
-import ExperiencePreview from "../components/ExperiencePreview";
 import HowItWorks from "../components/HowItWorks";
 import Categories from "../components/Categories";
 import Footer from "../components/Footer";
-import WaitlistModal from "../components/WaitlistModal";
 
 export default function Home() {
-  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
-
   return (
-    <>
-      <main className="bg-black text-white">
-  <Navbar onJoinClick={() => setIsWaitlistOpen(true)} />
+    <main className="min-h-screen bg-black text-white">
+      <Navbar />
 
-  <Hero onJoinClick={() => setIsWaitlistOpen(true)} />
+      <Hero />
 
-  <Stats />
+      <Stats />
 
-  <WhyRelata />
+      <HowItWorks />
 
-  <HowItWorks />
+      <Categories />
 
-  <Categories />
-
-  <Footer />
-</main>
-      <WaitlistModal
-        isOpen={isWaitlistOpen}
-        onClose={() => setIsWaitlistOpen(false)}
-      />
-    </>
+      <Footer />
+    </main>
   );
 }
