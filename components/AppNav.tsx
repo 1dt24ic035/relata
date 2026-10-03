@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-const navigation = [
+type NavigationItem = {
+  label: string;
+  href: string;
+  icon: string;
+};
+
+const navigation: NavigationItem[] = [
   {
     label: "Home",
     href: "/feed",
@@ -39,6 +47,42 @@ const navigation = [
 export default function AppNav() {
   const pathname = usePathname();
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadUnreadNotifications();
+  }, [pathname]);
+
+  async function loadUnreadNotifications(): Promise<void> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const { count, error } = await supabase
+      .from("notifications")
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .eq("recipient_id", user.id)
+      .is("read_at", null);
+
+    if (error) {
+      console.error(
+        "Failed to load unread notifications:",
+        error
+      );
+      return;
+    }
+
+    setUnreadCount(count ?? 0);
+  }
+
   return (
     <>
       {/* Desktop Navigation */}
@@ -61,27 +105,35 @@ export default function AppNav() {
             {navigation.map((item) => {
               const active =
                 pathname === item.href ||
-                pathname.startsWith(
-                  `${item.href}/`
-                );
+                pathname.startsWith(`${item.href}/`);
+
+              const isNotifications =
+                item.label === "Notifications";
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                  className={`relative flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                     active
                       ? "bg-purple-600/15 text-purple-300"
                       : "text-gray-400 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <span className="text-base">
+                  <span className="relative text-base">
                     {item.icon}
+
+                    {isNotifications &&
+                      unreadCount > 0 && (
+                        <span className="absolute -right-2 -top-2 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                          {unreadCount > 99
+                            ? "99+"
+                            : unreadCount}
+                        </span>
+                      )}
                   </span>
 
-                  <span>
-                    {item.label}
-                  </span>
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
@@ -107,13 +159,13 @@ export default function AppNav() {
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         <div className="mx-auto flex max-w-lg items-center justify-between py-2">
-
           {navigation.map((item) => {
             const active =
               pathname === item.href ||
-              pathname.startsWith(
-                `${item.href}/`
-              );
+              pathname.startsWith(`${item.href}/`);
+
+            const isNotifications =
+              item.label === "Notifications";
 
             return (
               <Link
@@ -125,13 +177,21 @@ export default function AppNav() {
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
-                <span className="text-lg leading-none">
+                <span className="relative text-lg leading-none">
                   {item.icon}
+
+                  {isNotifications &&
+                    unreadCount > 0 && (
+                      <span className="absolute -right-2 -top-2 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                        {unreadCount > 99
+                          ? "99+"
+                          : unreadCount}
+                      </span>
+                    )}
                 </span>
 
                 <span className="truncate">
-                  {item.label ===
-                  "Notifications"
+                  {item.label === "Notifications"
                     ? "Alerts"
                     : item.label}
                 </span>

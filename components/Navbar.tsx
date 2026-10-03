@@ -63,6 +63,13 @@ export default function Navbar({
               Explore
             </Link>
 
+            <Link
+              href="/saved"
+              className="transition hover:text-purple-300"
+            >
+              Saved
+            </Link>
+
             <a
               href="/#categories"
               className="transition hover:text-purple-300"

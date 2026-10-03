@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppNav from "@/components/AppNav";
 
@@ -23,7 +24,11 @@ type Profile = {
 
 type TrendingExperience = Experience & {
   profile: Profile | null;
+  liked: boolean;
+  bookmarked: boolean;
   likeCount: number;
+  likeLoading: boolean;
+  bookmarkLoading: boolean;
 };
 
 function cleanCategory(category: string) {
@@ -36,24 +41,12 @@ function cleanCategory(category: string) {
 }
 
 function getCategoryIcon(category: string) {
-  const normalized =
-    cleanCategory(category).toLowerCase();
+  const normalized = cleanCategory(category).toLowerCase();
 
-  if (normalized.includes("education")) {
-    return "🎓";
-  }
-
-  if (normalized.includes("career")) {
-    return "💼";
-  }
-
-  if (normalized.includes("travel")) {
-    return "✈️";
-  }
-
-  if (normalized.includes("food")) {
-    return "🍔";
-  }
+  if (normalized.includes("education")) return "🎓";
+  if (normalized.includes("career")) return "💼";
+  if (normalized.includes("travel")) return "✈️";
+  if (normalized.includes("food")) return "🍔";
 
   if (
     normalized.includes("technology") ||
@@ -62,25 +55,11 @@ function getCategoryIcon(category: string) {
     return "💻";
   }
 
-  if (normalized.includes("health")) {
-    return "❤️";
-  }
-
-  if (normalized.includes("finance")) {
-    return "💰";
-  }
-
-  if (normalized.includes("relationship")) {
-    return "❤️";
-  }
-
-  if (normalized.includes("college")) {
-    return "🏫";
-  }
-
-  if (normalized.includes("life")) {
-    return "🌱";
-  }
+  if (normalized.includes("health")) return "❤️";
+  if (normalized.includes("finance")) return "💰";
+  if (normalized.includes("relationship")) return "❤️";
+  if (normalized.includes("college")) return "🏫";
+  if (normalized.includes("life")) return "🌱";
 
   return "✨";
 }
@@ -93,53 +72,50 @@ function getTrendingScore(
   likeCount: number,
   createdAt: string
 ) {
-  const ageInHours =
-    Math.max(
-      1,
-      (Date.now() -
-        new Date(createdAt).getTime()) /
-        (1000 * 60 * 60)
-    );
+  const ageInHours = Math.max(
+    1,
+    (Date.now() - new Date(createdAt).getTime()) /
+      (1000 * 60 * 60)
+  );
 
   return (
     likeCount * 10 +
-    100 /
-      Math.pow(
-        ageInHours + 2,
-        0.65
-      )
+    100 / Math.pow(ageInHours + 2, 0.65)
   );
 }
 
 export default function TrendingPage() {
-  const [experiences, setExperiences] =
-    useState<TrendingExperience[]>([]);
+  const router = useRouter();
 
-  const [loading, setLoading] =
-    useState(true);
+  const [experiences, setExperiences] = useState<
+    TrendingExperience[]
+  >([]);
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadTrending();
   }, []);
 
-  async function getLikeCount(
-    experienceId: string
-  ) {
+  async function getLikeCount(experienceId: string) {
     const { count } = await supabase
       .from("likes")
       .select("*", {
         count: "exact",
         head: true,
       })
-      .eq(
-        "experience_id",
-        experienceId
-      );
+      .eq("experience_id", experienceId);
 
     return count || 0;
   }
 
   async function loadTrending() {
+    setLoading(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     const {
       data: experiencesData,
       error,
@@ -155,60 +131,291 @@ export default function TrendingPage() {
         "Error loading trending feed:",
         error
       );
-
       setLoading(false);
       return;
     }
 
-    const enriched =
-      await Promise.all(
-        experiencesData.map(
-          async (experience) => {
-            const { data: profile } =
-              await supabase
-                .from("profiles")
-                .select(
-                  "id, display_name, username, avatar_url"
-                )
-                .eq(
-                  "id",
-                  experience.user_id
-                )
-                .maybeSingle();
+    const enriched = await Promise.all(
+      experiencesData.map(async (experience) => {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select(
+            "id, display_name, username, avatar_url"
+          )
+          .eq("id", experience.user_id)
+          .maybeSingle();
 
-            const likeCount =
-              await getLikeCount(
+        const likeCount = await getLikeCount(
+          experience.id
+        );
+
+        let liked = false;
+        let bookmarked = false;
+
+        if (user) {
+          const { data: likeData } =
+            await supabase
+              .from("likes")
+              .select("id")
+              .eq(
+                "experience_id",
                 experience.id
-              );
+              )
+              .eq("user_id", user.id)
+              .maybeSingle();
 
-            return {
-              ...experience,
-              profile,
-              likeCount,
-            };
-          }
-        )
+          liked = !!likeData;
+
+          const { data: bookmarkData } =
+            await supabase
+              .from("bookmarks")
+              .select("id")
+              .eq(
+                "experience_id",
+                experience.id
+              )
+              .eq("user_id", user.id)
+              .maybeSingle();
+
+          bookmarked = !!bookmarkData;
+        }
+
+        return {
+          ...experience,
+          profile,
+          liked,
+          bookmarked,
+          likeCount,
+          likeLoading: false,
+          bookmarkLoading: false,
+        };
+      })
+    );
+
+    const sorted = enriched.sort((a, b) => {
+      const scoreA = getTrendingScore(
+        a.likeCount,
+        a.created_at
       );
 
-    const sorted =
-      enriched.sort((a, b) => {
-        const scoreA =
-          getTrendingScore(
-            a.likeCount,
-            a.created_at
-          );
+      const scoreB = getTrendingScore(
+        b.likeCount,
+        b.created_at
+      );
 
-        const scoreB =
-          getTrendingScore(
-            b.likeCount,
-            b.created_at
-          );
-
-        return scoreB - scoreA;
-      });
+      return scoreB - scoreA;
+    });
 
     setExperiences(sorted);
     setLoading(false);
+  }
+
+  async function toggleLike(experienceId: string) {
+    const item = experiences.find(
+      (experience) =>
+        experience.id === experienceId
+    );
+
+    if (!item || item.likeLoading) {
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    const previousLiked = item.liked;
+    const previousCount = item.likeCount;
+    const optimisticLiked = !previousLiked;
+
+    // Optimistic UI
+    setExperiences((previous) =>
+      previous.map((experience) =>
+        experience.id === experienceId
+          ? {
+              ...experience,
+              liked: optimisticLiked,
+              likeCount: optimisticLiked
+                ? previousCount + 1
+                : Math.max(0, previousCount - 1),
+              likeLoading: true,
+            }
+          : experience
+      )
+    );
+
+    try {
+      if (previousLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq(
+            "experience_id",
+            experienceId
+          )
+          .eq("user_id", user.id);
+
+        if (error) {
+          throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from("likes")
+          .insert({
+            user_id: user.id,
+            experience_id: experienceId,
+          });
+
+        // Duplicate like is harmless.
+        if (
+          error &&
+          error.code !== "23505"
+        ) {
+          throw error;
+        }
+      }
+
+      // Always get the real count from Supabase.
+      const latestCount =
+        await getLikeCount(experienceId);
+
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
+            ? {
+                ...experience,
+                liked: optimisticLiked,
+                likeCount: latestCount,
+                likeLoading: false,
+              }
+            : experience
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Error updating like:",
+        error
+      );
+
+      // Revert optimistic UI.
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
+            ? {
+                ...experience,
+                liked: previousLiked,
+                likeCount: previousCount,
+                likeLoading: false,
+              }
+            : experience
+        )
+      );
+    }
+  }
+
+  async function toggleBookmark(
+    experienceId: string
+  ) {
+    const item = experiences.find(
+      (experience) =>
+        experience.id === experienceId
+    );
+
+    if (!item || item.bookmarkLoading) {
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    const previousBookmarked =
+      item.bookmarked;
+
+    setExperiences((previous) =>
+      previous.map((experience) =>
+        experience.id === experienceId
+          ? {
+              ...experience,
+              bookmarked:
+                !previousBookmarked,
+              bookmarkLoading: true,
+            }
+          : experience
+      )
+    );
+
+    try {
+      if (previousBookmarked) {
+        const { error } = await supabase
+          .from("bookmarks")
+          .delete()
+          .eq(
+            "experience_id",
+            experienceId
+          )
+          .eq("user_id", user.id);
+
+        if (error) {
+          throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from("bookmarks")
+          .insert({
+            user_id: user.id,
+            experience_id: experienceId,
+          });
+
+        if (
+          error &&
+          error.code !== "23505"
+        ) {
+          throw error;
+        }
+      }
+
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
+            ? {
+                ...experience,
+                bookmarked:
+                  !previousBookmarked,
+                bookmarkLoading: false,
+              }
+            : experience
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Error updating bookmark:",
+        error
+      );
+
+      setExperiences((previous) =>
+        previous.map((experience) =>
+          experience.id === experienceId
+            ? {
+                ...experience,
+                bookmarked:
+                  previousBookmarked,
+                bookmarkLoading: false,
+              }
+            : experience
+        )
+      );
+    }
   }
 
   if (loading) {
@@ -218,9 +425,7 @@ export default function TrendingPage() {
 
         <div className="mx-auto max-w-4xl px-5 py-10 sm:px-6">
           <div className="h-10 w-56 animate-pulse rounded-xl bg-zinc-900" />
-
           <div className="mt-3 h-5 w-80 animate-pulse rounded bg-zinc-900" />
-
           <div className="mt-10 h-72 w-full animate-pulse rounded-3xl bg-zinc-900" />
         </div>
       </main>
@@ -228,28 +433,23 @@ export default function TrendingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white pb-20 md:pb-0">
+    <main className="min-h-screen bg-black pb-20 text-white md:pb-0">
       <AppNav />
 
       <div className="mx-auto max-w-4xl px-5 py-10 sm:px-6">
-
         <div className="mb-8">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Trending
-            </h1>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            Trending
+          </h1>
 
-            <p className="mt-2 text-gray-500">
-              Experiences people are engaging
-              with right now.
-            </p>
-          </div>
+          <p className="mt-2 text-gray-500">
+            Experiences people are engaging
+            with right now.
+          </p>
         </div>
 
         <div className="mb-8 flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-purple-500/5 px-5 py-4">
-          <span className="text-2xl">
-            🔥
-          </span>
+          <span className="text-2xl">🔥</span>
 
           <div>
             <p className="font-semibold text-white">
@@ -282,10 +482,9 @@ export default function TrendingPage() {
               const username =
                 profile?.username;
 
-              const category =
-                cleanCategory(
-                  experience.category
-                );
+              const category = cleanCategory(
+                experience.category
+              );
 
               return (
                 <article
@@ -359,14 +558,66 @@ export default function TrendingPage() {
                         Read Experience →
                       </Link>
 
-                      <div className="rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-gray-300">
-                        ❤️{" "}
-                        {experience.likeCount}{" "}
-                        {experience.likeCount ===
-                        1
-                          ? "like"
-                          : "likes"}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toggleLike(
+                            experience.id
+                          )
+                        }
+                        disabled={
+                          experience.likeLoading
+                        }
+                        className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                          experience.liked
+                            ? "border-red-500/40 bg-red-500/10 text-red-400"
+                            : "border-white/10 bg-zinc-900 text-gray-300 hover:border-red-500/30 hover:text-red-400"
+                        } ${
+                          experience.likeLoading
+                            ? "cursor-not-allowed opacity-60"
+                            : ""
+                        }`}
+                        aria-label={
+                          experience.liked
+                            ? "Unlike experience"
+                            : "Like experience"
+                        }
+                      >
+                        {experience.liked
+                          ? "❤️"
+                          : "🤍"}{" "}
+                        {experience.likeCount}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toggleBookmark(
+                            experience.id
+                          )
+                        }
+                        disabled={
+                          experience.bookmarkLoading
+                        }
+                        className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                          experience.bookmarked
+                            ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-300"
+                            : "border-white/10 bg-zinc-900 text-gray-300 hover:border-yellow-500/30 hover:text-yellow-300"
+                        } ${
+                          experience.bookmarkLoading
+                            ? "cursor-not-allowed opacity-60"
+                            : ""
+                        }`}
+                        aria-label={
+                          experience.bookmarked
+                            ? "Remove bookmark"
+                            : "Bookmark experience"
+                        }
+                      >
+                        {experience.bookmarked
+                          ? "🔖"
+                          : "🔖"}
+                      </button>
                     </div>
                   </div>
                 </article>
