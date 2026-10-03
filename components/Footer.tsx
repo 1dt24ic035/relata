@@ -8,14 +8,13 @@ export default function Footer() {
 
           {/* Brand */}
           <div>
-            <Link
-              href="/"
-              className="inline-block bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-3xl font-bold text-transparent"
-            >
-              Relata
+            <Link href="/" className="inline-block">
+              <h2 className="bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-3xl font-bold text-transparent">
+                Relata
+              </h2>
             </Link>
 
-            <p className="mt-5 max-w-sm leading-7 text-gray-400">
+            <p className="mt-5 leading-7 text-gray-400">
               Learn from real experiences before making life's biggest
               decisions.
             </p>
@@ -28,7 +27,7 @@ export default function Footer() {
             <ul className="space-y-3 text-gray-400">
               <li>
                 <Link
-                  href="/explore"
+                  href="/login"
                   className="transition hover:text-white"
                 >
                   Explore
@@ -36,17 +35,17 @@ export default function Footer() {
               </li>
 
               <li>
-                <a
-                  href="/#categories"
+                <Link
+                  href="/login"
                   className="transition hover:text-white"
                 >
                   Categories
-                </a>
+                </Link>
               </li>
 
               <li>
                 <Link
-                  href="/create"
+                  href="/login"
                   className="transition hover:text-white"
                 >
                   Create Experience
@@ -61,12 +60,12 @@ export default function Footer() {
 
             <ul className="space-y-3 text-gray-400">
               <li>
-                <a
-                  href="/#about"
+                <Link
+                  href="/login"
                   className="transition hover:text-white"
                 >
                   About
-                </a>
+                </Link>
               </li>
 
               <li>
@@ -86,30 +85,30 @@ export default function Footer() {
 
             <ul className="space-y-3 text-gray-400">
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/login"
                   className="transition hover:text-white"
                 >
                   Instagram
-                </a>
+                </Link>
               </li>
 
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/login"
                   className="transition hover:text-white"
                 >
                   LinkedIn
-                </a>
+                </Link>
               </li>
 
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/login"
                   className="transition hover:text-white"
                 >
                   X (Twitter)
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
