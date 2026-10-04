@@ -4,6 +4,34 @@ export default function Footer() {
   return (
     <footer className="border-t border-white/10 bg-black text-white">
       <div className="mx-auto max-w-7xl px-6 py-20">
+
+        {/* About */}
+        <section id="about" className="mb-20 scroll-mt-32">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-purple-400">
+              ABOUT RELATA
+            </p>
+
+            <h2 className="text-4xl font-bold md:text-5xl">
+              Real experiences.
+              <br />
+              Better decisions.
+            </h2>
+
+            <p className="mt-6 text-lg leading-8 text-gray-400">
+              Relata is a platform built around one simple idea:
+              people can make better decisions when they learn from
+              experiences others have already lived.
+            </p>
+
+            <p className="mt-4 text-lg leading-8 text-gray-400">
+              Share what you've learned, discover real stories, and
+              gain perspective before making your next important decision.
+            </p>
+          </div>
+        </section>
+
+        {/* Footer Grid */}
         <div className="grid gap-12 md:grid-cols-4">
 
           {/* Brand */}
@@ -14,7 +42,7 @@ export default function Footer() {
               </h2>
             </Link>
 
-            <p className="mt-5 leading-7 text-gray-400">
+            <p className="mt-5 max-w-xs leading-7 text-gray-400">
               Learn from real experiences before making life's biggest
               decisions.
             </p>
@@ -22,7 +50,9 @@ export default function Footer() {
 
           {/* Product */}
           <div>
-            <h3 className="mb-5 font-semibold">Product</h3>
+            <h3 className="mb-5 font-semibold text-white">
+              Product
+            </h3>
 
             <ul className="space-y-3 text-gray-400">
               <li>
@@ -36,7 +66,7 @@ export default function Footer() {
 
               <li>
                 <Link
-                  href="/login"
+                  href="/#categories"
                   className="transition hover:text-white"
                 >
                   Categories
@@ -56,12 +86,14 @@ export default function Footer() {
 
           {/* Company */}
           <div>
-            <h3 className="mb-5 font-semibold">Company</h3>
+            <h3 className="mb-5 font-semibold text-white">
+              Company
+            </h3>
 
             <ul className="space-y-3 text-gray-400">
               <li>
                 <Link
-                  href="/login"
+                  href="/#about"
                   className="transition hover:text-white"
                 >
                   About
@@ -81,40 +113,42 @@ export default function Footer() {
 
           {/* Community */}
           <div>
-            <h3 className="mb-5 font-semibold">Community</h3>
+            <h3 className="mb-5 font-semibold text-white">
+              Community
+            </h3>
 
             <ul className="space-y-3 text-gray-400">
               <li>
-                <Link
-                  href="/login"
+                <a
+                  href="#"
                   className="transition hover:text-white"
                 >
                   Instagram
-                </Link>
+                </a>
               </li>
 
               <li>
-                <Link
-                  href="/login"
+                <a
+                  href="#"
                   className="transition hover:text-white"
                 >
                   LinkedIn
-                </Link>
+                </a>
               </li>
 
               <li>
-                <Link
-                  href="/login"
+                <a
+                  href="#"
                   className="transition hover:text-white"
                 >
                   X (Twitter)
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
-
         </div>
 
+        {/* Bottom */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 md:flex-row">
           <p className="text-sm text-gray-500">
             © 2026 Relata. All rights reserved.
